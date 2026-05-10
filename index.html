@@ -5,15 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Mantenimiento</title>
   <link rel="stylesheet" href="style.css">
+    <script src="https://npmcdn.com/parse/dist/parse.min.js"></script>
+  <script>
+        Parse.initialize("VNCETodfuWvUtF1L5O5kcCp3r8JpFpg0GugpBNWz", "5wbDOn3d10TBhGPPfEoFgvZp7EDO5TiD2YyssAPv");
+    Parse.serverURL = "https://parseapi.back4app.com/";
+  </script>
 </head>
 <body>
 
-  <header>
-    <h1>🔧 Mis Coches</h1>
-    <button id="btn-nuevo-coche" class="btn-primary">➕ Añadir coche</button>
-  </header>
+  <!-- PANTALLA DE AUTENTICACIÓN -->
+  <div id="pagina-auth">
+    <div class="auth-box">
+      <h1>🔧 Mis Coches</h1>
+      <p class="auth-subtitle">Gestiona el mantenimiento de tus vehículos</p>
 
-  <div id="pagina-coches">
+      <div class="auth-tabs">
+        <button class="auth-tab activo" onclick="mostrarTab('login')">Iniciar sesión</button>
+        <button class="auth-tab" onclick="mostrarTab('registro')">Registrarse</button>
+      </div>
+
+      <!-- LOGIN -->
+      <form id="form-login" onsubmit="loginUsuario(event)">
+        <div class="campo">
+          <label>Correo electrónico</label>
+          <input type="email" id="login-email" placeholder="tu@email.com" required>
+        </div>
+        <div class="campo">
+          <label>Contraseña</label>
+          <input type="password" id="login-pass" placeholder="••••••••" required>
+        </div>
+        <p id="login-error" class="auth-error oculto"></p>
+        <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">Entrar</button>
+      </form>
+
+      <!-- REGISTRO -->
+      <form id="form-registro" class="oculto" onsubmit="registrarUsuario(event)">
+        <div class="campo">
+          <label>Apodo / Nombre</label>
+          <input type="text" id="reg-apodo" placeholder="Ej: Sergio" required>
+        </div>
+        <div class="campo">
+          <label>Correo electrónico</label>
+          <input type="email" id="reg-email" placeholder="tu@email.com" required>
+        </div>
+        <div class="campo">
+          <label>Contraseña (mínimo 6 caracteres)</label>
+          <input type="password" id="reg-pass" placeholder="••••••••" required minlength="6">
+        </div>
+        <p id="reg-error" class="auth-error oculto"></p>
+        <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">Crear cuenta</button>
+      </form>
+    </div>
+  </div>
+
+<header> class="oculto"
+    <div style="display:flex;align-items:center;gap:8px;">
+      <h1>🔧 Mis Coches</h1>
+      <span id="header-apodo" style="font-size:0.85rem;opacity:0.8;"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="btn-nuevo-coche" class="btn-primary">➕ Añadir coche</button>
+            <button onclick="abrirModalPlanes()" class="btn-plan-header" id="btn-mi-plan">⭐ Mi plan</button>
+      <button onclick="cerrarSesion()" class="btn-danger" style="font-size:0.8rem;padding:6px 12px;">Salir</button>
+    </div>
+  </header>
+  <div id="pagina-coches" class="oculto">
     <div id="lista-coches"><p class="vacio">No tienes coches aún. Añade el primero.</p></div>
   </div>
 
@@ -223,6 +279,19 @@
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-primary" onclick="guardarEdicionMant()" style="flex:1">Guardar</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-editar-mant').classList.add('oculto')" style="flex:1">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PLANES -->
+  <div id="modal-planes" class="modal-overlay oculto">
+    <div class="modal" style="max-width:700px;width:95%;">
+      <h2 style="text-align:center;margin-bottom:4px;">⭐ Planes de suscripción</h2>
+      <p id="planes-plan-actual" style="text-align:center;color:#666;margin-bottom:20px;"></p>
+      <div id="planes-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
+      <p style="font-size:0.8rem;color:#999;text-align:center;margin-top:16px;">Para cambiar de plan, solicita el cambio y el administrador lo activará manualmente.</p>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="document.getElementById('modal-planes').classList.add('oculto')" class="btn-secondary">Cerrar</button>
       </div>
     </div>
   </div>
