@@ -362,7 +362,7 @@ function eliminarReferencia(id){
 }
 
 // ===== UTILS =====
-function guardarCoches(){ localStorage.setItem('coches',JSON.stringify(coches)); }
+function guardarCoches(){ if(usuarioActual){ coches.forEach(c => guardarCocheIndividual(c).catch(()=>{})); } }
 
 // ===== EDICION COCHE =====
 let mantEditId = null;
