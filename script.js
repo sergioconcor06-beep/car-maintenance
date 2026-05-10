@@ -4,8 +4,7 @@ Parse.serverURL = 'https://parseapi.back4app.com/';
 
 // ===== ESTADO =====
 let vehiculosDB = [];
-let coches = JSON.parse(localStorage.getItem('coches') || '[]');
-let cocheActualId = null;
+let coches = [];
 
 // ===== MOTIVOS MANTENIMIENTO =====
 const MOTIVOS_DEFAULT = ['Cambio de aceite','Filtro de aire','Filtro de combustible','Pastillas de freno','Discos de freno','Correa de distribuci\u00f3n','Buj\u00edas','Neum\u00e1ticos','Bater\u00eda','ITV','Revisi\u00f3n general'];
@@ -481,7 +480,129 @@ m.fecha = document.getElementById('edit-mant-fecha').value;
 }
 
 
+// ===== PLANES =====
+const PLANES = {
+  free:     { coches:1, mantenimientos:15, referencias:20, dinero:false, alarmas:false, enviar:0, recibir:0 },
+  basic:    { coches:2, mantenimientos:30, referencias:50, dinero:true,  alarmas:false, enviar:0, recibir:0 },
+  normal:   { coches:4, mantenimientos:100,referencias:100,dinero:true,  alarmas:true,  enviar:0, recibir:3 },
+  pro:      { coches:8, mantenimientos:300,referencias:300,dinero:true,  alarmas:true,  enviar:8, recibir:10 },
+  premium:  { coches:15,mantenimientos:999,referencias:999,dinero:true,  alarmas:true,  enviar:15,recibir:15 },
+  business: { coches:999,mantenimientos:9999,referencias:9999,dinero:true,alarmas:true,  enviar:999,recibir:999 }
+};
+
+let usuarioActual = null;
+
+// ===== PARSE: GUARDAR / CARGAR COCHES =====
+async function guardarCocheIndividual(c) {
+  if (!usuarioActual) return;
+  const CocheClass = Parse.Object.extend('CocheUsuario');
+  let obj;
+  if (c._parseId) {
+    obj = new CocheClass(); obj.id = c._parseId;
+  } else {
+    obj = new CocheClass();
+    obj.set('usuario', usuarioActual);
+    const acl = new Parse.ACL(usuarioActual); acl.setPublicReadAccess(false);
+    obj.setACL(acl);
+  }
+  const d = Object.assign({}, c); delete d._parseId;
+  obj.set('datos', d);
+  const saved = await obj.save();
+  c._parseId = saved.id;
+}
+
+async function cargarCochesUsuario() {
+  if (!usuarioActual) return;
+  const CocheClass = Parse.Object.extend('CocheUsuario');
+  const q = new Parse.Query(CocheClass);
+  q.equalTo('usuario', usuarioActual);
+  q.limit(1000);
+  const res = await q.find();
+  coches = res.map(obj => { const d = obj.get('datos') || {}; d._parseId = obj.id; return d; });
+  renderCoches();
+  verificarSugerenciasAprobadas();
+}
+
+// ===== AUTH =====
+function mostrarTab(tab) {
+  const fLogin = document.getElementById('form-login');
+  const fReg = document.getElementById('form-registro');
+  if (!fLogin || !fReg) return;
+  if (tab === 'registro') {
+    fLogin.classList.add('oculto');
+    fReg.classList.remove('oculto');
+  } else {
+    fLogin.classList.remove('oculto');
+    fReg.classList.add('oculto');
+  }
+}
+
+function _mostrarAuth() {
+  document.getElementById('pagina-auth').classList.remove('oculto');
+  const h = document.querySelector('header');
+  const pc = document.getElementById('pagina-coches');
+  const pd = document.getElementById('pagina-detalle');
+  if (h) h.classList.add('oculto');
+  if (pc) pc.classList.add('oculto');
+  if (pd) pd.classList.add('oculto');
+  mostrarTab('login');
+}
+
+function _mostrarApp(user) {
+  usuarioActual = user;
+  document.getElementById('pagina-auth').classList.add('oculto');
+  const h = document.querySelector('header');
+  const pc = document.getElementById('pagina-coches');
+  if (h) h.classList.remove('oculto');
+  if (pc) pc.classList.remove('oculto');
+  const apodo = user.get('apodo') || user.get('username') || user.get('email');
+  const plan = user.get('plan') || 'free';
+  const el = document.getElementById('header-apodo');
+  if (el) el.textContent = apodo + ' (★ ' + plan.toUpperCase() + ')';
+  cargarMarcas();
+  cargarCochesUsuario();
+}
+
+async function loginUsuario(event) {
+  event.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = ''; err.classList.add('oculto');
+  try {
+    const user = await Parse.User.logIn(email, pass);
+    _mostrarApp(user);
+  } catch(ex) {
+    err.textContent = 'Email o contraseña incorrectos: ' + (ex.message || '');
+    err.classList.remove('oculto');
+  }
+}
+
+async function registrarUsuario(event) {
+  event.preventDefault();
+  const apodo = document.getElementById('reg-apodo').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const err = document.getElementById('reg-error');
+  err.textContent = ''; err.classList.add('oculto');
+  try {
+    const u = new Parse.User();
+    u.set('username', email); u.set('password', pass);
+    u.set('email', email); u.set('apodo', apodo); u.set('plan', 'free');
+    await u.signUp();
+    _mostrarApp(u);
+  } catch(ex) {
+    err.textContent = ex.message || 'Error al registrarse.';
+    err.classList.remove('oculto');
+  }
+}
+
+function cerrarSesion() {
+  Parse.User.logOut().then(() => { usuarioActual = null; coches = []; _mostrarAuth(); });
+}
+
 // ===== INICIO =====
-renderCoches();
-cargarMarcas();
-verificarSugerenciasAprobadas();
+document.addEventListener('DOMContentLoaded', function() {
+  const user = Parse.User.current();
+  if (user) { _mostrarApp(user); } else { _mostrarAuth(); }
+});
