@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial de Mantenimiento</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <h1>🔧 Mis Coches</h1>
+    <button id="btn-nuevo-coche" class="btn-primary">➕ Añadir coche</button>
+  </header>
+
+  <div id="pagina-coches">
+    <div id="lista-coches"><p class="vacio">No tienes coches aún. Añade el primero.</p></div>
+  </div>
+
+  <div id="pagina-detalle" class="oculto">
+    <div class="detalle-header">
+      <button id="btn-volver" class="btn-volver">← Mis coches</button>
+      <h2 id="detalle-titulo"></h2>
+      <button id="btn-eliminar-coche" class="btn-danger">Eliminar coche</button>
+              <button id="btn-editar-coche" class="btn-secondary">✏️ Editar coche</button>
+    </div>
+    <div class="tabs">
+      <button class="tab activo" data-tab="mantenimientos">Mantenimientos</button>
+      <button class="tab" data-tab="referencias">Referencias</button>
+    </div>
+    <div id="tab-mantenimientos" class="tab-content">
+      <div class="card">
+        <h3>Nuevo mantenimiento</h3>
+        <form id="form-mantenimiento">
+          <div class="fila">
+            <div class="campo"><label>Fecha</label><input type="date" id="m-fecha" required></div>
+            <div class="campo"><label>Kilómetros</label><input type="number" id="m-km" placeholder="Ej: 85000" required></div>
+            <div class="campo"><label>Precio (€)</label><input type="number" id="m-precio" placeholder="Ej: 49.90" step="0.01"></div>
+          </div>
+          <div class="fila">
+            <div class="campo">
+              <label>Motivo / Tipo</label>
+              <select id="m-tipo" required></select>
+              <input type="text" id="m-tipo-custom" class="oculto" placeholder="Escribe el motivo personalizado...">
+            </div>
+            <div class="campo"><label>Taller / Notas</label><input type="text" id="m-notas" placeholder="Nombre del taller, observaciones..."></div>
+          </div>
+                    <div class="campo">
+            <label>Foto de la pieza (opcional)</label>
+            <input type="file" id="m-foto-pieza" accept="image/*" style="width:100%;">
+          </div>
+          <div class="campo">
+            <label>Foto de la factura (opcional)</label>
+            <input type="file" id="m-foto-factura" accept="image/*" style="width:100%;">
+          </div>
+          <button type="submit" class="btn-primary">💾 Guardar mantenimiento</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="tabla-header">
+          <h3>Historial</h3>
+          <div class="ordenar">
+            <label>Ordenar por:</label>
+            <select id="orden-mantenimientos">
+              <option value="fecha-desc">Fecha (más reciente)</option>
+              <option value="fecha-asc">Fecha (más antigua)</option>
+              <option value="km-desc">Km (mayor)</option>
+              <option value="km-asc">Km (menor)</option>
+              <option value="precio-desc">Precio (mayor)</option>
+              <option value="precio-asc">Precio (menor)</option>
+              <option value="tipo-asc">Motivo (A-Z)</option>
+            </select>
+          </div>
+        </div>
+        <div id="resumen-precio" class="resumen-precio"></div>
+        <div id="lista-mantenimientos"><p class="vacio">Sin mantenimientos aún.</p></div>
+      </div>
+    </div>
+    <div id="tab-referencias" class="tab-content oculto">
+      <div class="card">
+        <h3>Añadir referencia</h3>
+        <form id="form-referencia">
+          <div class="fila">
+            <div class="campo"><label>Nombre / Descripción</label><input type="text" id="r-nombre" placeholder="Ej: Filtro aceite" required></div>
+            <div class="campo"><label>Referencia / Código</label><input type="text" id="r-codigo" placeholder="Ej: OC90 / 0W-30" required></div>
+          </div>
+          <div class="fila">
+            <div class="campo"><label>Marca / Fabricante</label><input type="text" id="r-marca" placeholder="Ej: Mann, Castrol..."></div>
+            <div class="campo"><label>Notas</label><input type="text" id="r-notas" placeholder="Observaciones..."></div>
+          </div>
+                    <div class="campo">
+            <label>Foto de la pieza (opcional)</label>
+            <input type="file" id="r-foto-pieza" accept="image/*" style="width:100%;">
+          </div>
+          <div class="campo">
+            <label>Foto de la factura (opcional)</label>
+            <input type="file" id="r-foto-factura" accept="image/*" style="width:100%;">
+          </div>
+          <button type="submit" class="btn-primary">💾 Guardar referencia</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Referencias guardadas</h3>
+        <div id="lista-referencias"><p class="vacio">Sin referencias aún.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NUEVO COCHE -->
+  <div id="modal-coche" class="modal-overlay oculto">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Añadir nuevo coche</h3>
+        <button class="modal-cerrar" id="cerrar-modal">×</button>
+      </div>
+      <form id="form-coche">
+
+        <!-- MARCA -->
+        <div class="campo">
+          <label>Marca</label>
+          <select id="marca" required></select>
+          <input type="text" id="marca-custom" class="oculto" placeholder="Escribe la marca...">
+        </div>
+
+        <!-- MODELO -->
+        <div class="campo">
+          <label>Modelo</label>
+          <select id="modelo" required></select>
+          <input type="text" id="modelo-custom" class="oculto" placeholder="Escribe el modelo...">
+        </div>
+
+        <!-- AÑO -->
+        <div class="campo">
+          <label>Año</label>
+          <select id="anio" required>
+            <option value="">-- Selecciona año --</option>
+          </select>
+        </div>
+
+        <!-- APODO -->
+        <div class="campo">
+          <label>Mote / Apodo (opcional)</label>
+          <input type="text" id="apodo" placeholder="Ej: Mi A4, El viejo...">
+        </div>
+
+        <!-- AVISO SUGERENCIA -->
+        <div id="aviso-sugerencia" class="oculto aviso-info">
+          ℹ️ La marca/modelo que has escrito se enviará como sugerencia para revisarla. Si existe, se añadirá para todos los usuarios.
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:100%;margin-top:12px">➕ Añadir coche</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/parse/dist/parse.min.js"></script>
+  <script src="script.js"></script>
+
+  <!-- MODAL EDITAR COCHE -->
+  <div id="modal-editar-coche" class="modal-overlay oculto">
+    <div class="modal">
+      <h3 style="margin-bottom:16px">Editar coche</h3>
+      <div class="campo">
+        <label>Apodo</label>
+        <input type="text" id="edit-apodo" placeholder="Ej: Mi A4, El viejo...">
+      </div>
+      <div class="campo">
+        <label>Marca</label>
+        <input type="text" id="edit-marca" placeholder="Marca">
+      </div>
+      <div class="campo">
+        <label>Modelo</label>
+        <input type="text" id="edit-modelo" placeholder="Modelo">
+      </div>
+      <div class="campo">
+        <label>Año</label>
+        <input type="number" id="edit-anio" placeholder="Año" min="1900" max="2099">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-primary" onclick="guardarEdicionCoche()" style="flex:1">Guardar</button>
+        <button class="btn-secondary" onclick="document.getElementById('modal-editar-coche').classList.add('oculto')" style="flex:1">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR MANTENIMIENTO -->
+  <div id="modal-editar-mant" class="modal-overlay oculto">
+    <div class="modal">
+      <h3 style="margin-bottom:16px">Editar mantenimiento</h3>
+      <div class="campo">
+        <label>Fecha</label>
+        <input type="date" id="edit-mant-fecha">
+      </div>
+      <div class="campo">
+        <label>Kilometraje</label>
+        <input type="number" id="edit-mant-km" placeholder="Km">
+      </div>
+<div class="campo">
+            <label>Motivo/Tipo</label>
+            <select id="edit-mant-motivo" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+              <option value="">-- Selecciona tipo --</option>
+            </select>
+            <input type="text" id="edit-mant-motivo-custom" placeholder="Escribe el motivo..." class="oculto" style="margin-top:6px;width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+          </div>
+          <div class="campo">
+            <label>Foto de la pieza (opcional)</label>
+            <input type="file" id="edit-mant-foto-pieza" accept="image/*" style="width:100%;">
+            <img id="edit-mant-foto-pieza-preview" src="" alt="" style="max-width:100%;margin-top:6px;border-radius:6px;display:none;">
+          </div>
+          <div class="campo">
+            <label>Foto de la factura (opcional)</label>
+            <input type="file" id="edit-mant-foto-factura" accept="image/*" style="width:100%;">
+            <img id="edit-mant-foto-factura-preview" src="" alt="" style="max-width:100%;margin-top:6px;border-radius:6px;display:none;">
+          </div>
+      <div class="campo">
+        <label>Precio (€)</label>
+        <input type="number" id="edit-mant-precio" placeholder="0.00" step="0.01">
+      </div>
+      <div class="campo">
+        <label>Notas</label>
+        <textarea id="edit-mant-notas" rows="3" placeholder="Notas adicionales..." style="width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.95rem"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-primary" onclick="guardarEdicionMant()" style="flex:1">Guardar</button>
+        <button class="btn-secondary" onclick="document.getElementById('modal-editar-mant').classList.add('oculto')" style="flex:1">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

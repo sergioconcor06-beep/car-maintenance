@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin - Sugerencias</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+    header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 16px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px; margin-bottom: 24px; }
+    header h1 { font-size: 1.4rem; }
+    #panel { max-width: 900px; margin: 30px auto; padding: 0 20px 40px; }
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 20px; }
+    .card h2 { font-size: 1rem; color: #1a1a2e; margin-bottom: 16px; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
+    .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat { background: white; border-radius: 10px; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); min-width: 120px; text-align: center; }
+    .stat-num { font-size: 1.8rem; font-weight: 800; color: #4361ee; }
+    .stat-label { font-size: 0.8rem; color: #888; margin-top: 2px; }
+    .sugerencia { border: 1.5px solid #e8eaf0; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .sug-info { flex: 1; }
+    .sug-nombre { font-weight: 700; font-size: 1rem; color: #1a1a2e; }
+    .sug-anio { font-size: 0.85rem; color: #666; margin-top: 3px; }
+    .sug-estado { font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .estado-pendiente { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+    .estado-aprobado { background: #d1f5e0; color: #1a7c3e; border: 1px solid #28a745; }
+    .estado-rechazado { background: #fde8e8; color: #c0392b; border: 1px solid #ff4757; }
+    .sug-botones { display: flex; gap: 8px; }
+    .btn-aprobar { background: #28a745; color: white; border: none; border-radius: 7px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; }
+    .btn-aprobar:hover { background: #1e7e34; }
+    .btn-rechazar { background: #ff4757; color: white; border: none; border-radius: 7px; padding: 8px 14px; font-size: 0.85rem; cursor: pointer; }
+    .btn-rechazar:hover { background: #c0392b; }
+    .vacio { text-align: center; color: #aaa; padding: 30px 0; font-style: italic; }
+    .oculto { display: none !important; }
+    .filtros { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filtro-btn { background: #f0f2f5; border: 1.5px solid #ddd; border-radius: 20px; padding: 6px 16px; font-size: 0.85rem; cursor: pointer; }
+    .filtro-btn.activo { background: #4361ee; color: white; border-color: #4361ee; }
+  </style>
+</head>
+<body>
+<div id="panel">
+  <header>
+    <h1>Panel Admin - Sugerencias de vehiculos</h1>
+  </header>
+  <div class="stats" id="stats-panel">
+    <div class="stat"><div class="stat-num" id="st-pendientes">0</div><div class="stat-label">Pendientes</div></div>
+    <div class="stat"><div class="stat-num" id="st-aprobados">0</div><div class="stat-label">Aprobados</div></div>
+    <div class="stat"><div class="stat-num" id="st-rechazados">0</div><div class="stat-label">Rechazados</div></div>
+    <div class="stat"><div class="stat-num" id="st-total">0</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="card">
+    <h2>Sugerencias de vehiculos</h2>
+    <div class="filtros">
+      <button class="filtro-btn activo" onclick="filtrar('todos', this)">Todos</button>
+      <button class="filtro-btn" onclick="filtrar('pendiente', this)">Pendientes</button>
+      <button class="filtro-btn" onclick="filtrar('aprobado', this)">Aprobados</button>
+      <button class="filtro-btn" onclick="filtrar('rechazado', this)">Rechazados</button>
+    </div>
+    <div id="lista-sugerencias"><div class="vacio">Cargando...</div></div>
+  </div>
+</div>
+<script src="https://unpkg.com/parse/dist/parse.min.js"></script>
+<script>
+  const APP_ID = 'VNCETodfuWvUtF1L5O5kcCp3r8JpFpg0GugpBNWz';
+  const JS_KEY = '5wbDOn3d10TBhGPPfEoFgvZp7EDO5TiD2YyssAPv';
+  Parse.initialize(APP_ID, JS_KEY);
+  Parse.serverURL = 'https://parseapi.back4app.com/';
+  let todasLasSugerencias = [];
+  let filtroActual = 'todos';
+  async function cargarSugerencias() {
+    const SugerenciaVehiculo = Parse.Object.extend('SugerenciaVehiculo');
+    const query = new Parse.Query(SugerenciaVehiculo);
+    query.descending('createdAt');
+    query.limit(500);
+    try {
+      todasLasSugerencias = await query.find();
+      actualizarStats();
+      renderSugerencias();
+    } catch(e) {
+      document.getElementById('lista-sugerencias').innerHTML = '<div class="vacio">Error al cargar: ' + e.message + '</div>';
+    }
+  }
+  function actualizarStats() {
+    const pend = todasLasSugerencias.filter(s => s.get('estado') === 'pendiente').length;
+    const apro = todasLasSugerencias.filter(s => s.get('estado') === 'aprobado').length;
+    const rech = todasLasSugerencias.filter(s => s.get('estado') === 'rechazado').length;
+    document.getElementById('st-pendientes').textContent = pend;
+    document.getElementById('st-aprobados').textContent = apro;
+    document.getElementById('st-rechazados').textContent = rech;
+    document.getElementById('st-total').textContent = todasLasSugerencias.length;
+  }
+  function filtrar(estado, btn) {
+    filtroActual = estado;
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('activo'));
+    btn.classList.add('activo');
+    renderSugerencias();
+  }
+  function renderSugerencias() {
+    const lista = document.getElementById('lista-sugerencias');
+    let items = filtroActual === 'todos' ? todasLasSugerencias : todasLasSugerencias.filter(s => s.get('estado') === filtroActual);
+    if (items.length === 0) { lista.innerHTML = '<div class="vacio">No hay sugerencias en esta categoria</div>'; return; }
+    lista.innerHTML = items.map(s => {
+      const marca = s.get('marca') || '?';
+      const modelo = s.get('modelo') || '?';
+      const anio = s.get('anio') || '';
+      const estado = s.get('estado') || 'pendiente';
+      const id = s.id;
+      const claseEstado = estado === 'pendiente' ? 'estado-pendiente' : estado === 'aprobado' ? 'estado-aprobado' : 'estado-rechazado';
+      const botonesHtml = estado === 'pendiente' ? `<button class="btn-aprobar" onclick="aprobar('${id}','${marca}','${modelo}','${anio}')">Aprobar</button><button class="btn-rechazar" onclick="rechazar('${id}')">Rechazar</button>` : '';
+      return `<div class="sugerencia"><div class="sug-info"><div class="sug-nombre">${marca} ${modelo}</div><div class="sug-anio">${anio ? 'Anio: '+anio : ''} &bull; ID: ${id}</div></div><span class="sug-estado ${claseEstado}">${estado.charAt(0).toUpperCase()+estado.slice(1)}</span><div class="sug-botones">${botonesHtml}</div></div>`;
+    }).join('');
+  }
+async function aprobar(id, marca, modelo, anio) {
+    if (!confirm('Aprobar ' + marca + ' ' + modelo + '? Se creara un registro para todos los anos 1981-2026.')) return;
+    try {
+      const todosLosAnios = [];
+      for (let y = 1981; y <= 2026; y++) todosLosAnios.push(y);
+      const yearsStr = todosLosAnios.join('|');
+      const v = new (Parse.Object.extend('Vehiculo'))();
+      v.set('make_name', marca.toUpperCase());
+      v.set('make_slug', marca.toLowerCase().replace(/\s+/g, '-'));
+      v.set('model_name', modelo);
+      v.set('vehicle_type', 'car');
+      v.set('first_year', 1981);
+      v.set('last_year', 2026);
+      v.set('years', yearsStr);
+      await v.save();
+      const sug = todasLasSugerencias.find(s => s.id === id);
+      sug.set('estado', 'aprobado');
+      await sug.save();
+      actualizarStats();
+      renderSugerencias();
+      alert('Vehiculo aprobado y anadido correctamente.');
+    } catch(e) { alert('Error al aprobar: ' + e.message); }
+  }
+  async function rechazar(id) {
+    if (!confirm('Rechazar esta sugerencia?')) return;
+    try {
+      const sug = todasLasSugerencias.find(s => s.id === id);
+      sug.set('estado', 'rechazado');
+      await sug.save();
+      actualizarStats();
+      renderSugerencias();
+    } catch(e) { alert('Error al rechazar: ' + e.message); }
+  }
+  cargarSugerencias();
+</script>
+</body>
+</html>
