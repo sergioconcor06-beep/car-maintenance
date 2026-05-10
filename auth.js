@@ -1,6 +1,6 @@
 // ===== AUTH =====
 
-function mostrarTabAuth(tab) {
+function mostrarTab(tab) {
   document.getElementById('form-login').classList.toggle('oculto', tab !== 'login');
   document.getElementById('form-registro').classList.toggle('oculto', tab !== 'registro');
 }
@@ -10,7 +10,7 @@ function _mostrarAuth() {
   document.querySelector('header').classList.add('oculto');
   document.getElementById('pagina-coches').classList.add('oculto');
   document.getElementById('pagina-detalle').classList.add('oculto');
-  mostrarTabAuth('login');
+  mostrarTab('login');
 }
 
 function _mostrarApp(user) {
