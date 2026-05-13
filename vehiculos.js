@@ -38,26 +38,40 @@ async function cargarCochesUsuario() {
   coches = res.map(obj => {
     const d = obj.get('datos') || {};
     d._parseId = obj.id;
+    // Asegurar que existan los arrays
+    d.mantenimientos = d.mantenimientos || [];
+    d.referencias = d.referencias || [];
+    d.alarmas = d.alarmas || [];
+    d.id = String(d.id || obj.id);
     return d;
   });
+  console.log('Coches cargados:', coches.map(c => ({ id: String(c.id), marca: c.marca, modelo: c.modelo })));
   renderCoches();
+  if (typeof renderAlarmasResumen === 'function') renderAlarmasResumen();
+  if (typeof verificarNotifAlarmas === 'function') verificarNotifAlarmas();
   verificarSugerenciasAprobadas();
 }
 
 // --- Marcas desde Back4app ---
 async function cargarMarcas() {
   const sel = document.getElementById('marca');
+  if (!sel) {
+    console.error('No se encontró el elemento #marca');
+    return;
+  }
   sel.innerHTML = '<option value="">Cargando...</option>';
   try {
     const q = new Parse.Query(Parse.Object.extend('Vehiculo'));
     q.limit(2000); q.ascending('make_name');
     const res = await q.find();
+    console.log('Vehículos cargados:', res.length);
     vehiculosDB = res.map(v => ({
       marca: v.get('make_name'),
       modelo: v.get('model_name'),
       anios: (v.get('years') || '').split('|').filter(Boolean)
     }));
     const marcas = [...new Set(vehiculosDB.map(v => v.marca))].sort();
+    console.log('Marcas únicas:', marcas.length);
     sel.innerHTML = '<option value="">-- Selecciona marca --</option>';
     marcas.forEach(m => {
       const o = document.createElement('option');
@@ -68,6 +82,7 @@ async function cargarMarcas() {
     oOtro.value = '__otro__'; oOtro.textContent = 'Otra marca...';
     sel.appendChild(oOtro);
   } catch(e) {
+    console.error('Error al cargar marcas:', e);
     sel.innerHTML = '<option value="">Error al cargar</option>';
   }
 }
@@ -134,7 +149,7 @@ async function verificarSugerenciasAprobadas() {
 
 // --- Render lista coches ---
 function calcularGasto(c) {
-  return c.mantenimientos.reduce((s, m) => s + (parseFloat(m.precio) || 0), 0).toFixed(2) + ' €';
+  return (c.mantenimientos || []).reduce((s, m) => s + (parseFloat(m.precio) || 0), 0).toFixed(2) + ' €';
 }
 
 function renderCoches() {
@@ -143,23 +158,37 @@ function renderCoches() {
     lista.innerHTML = '<p style="color:#888;text-align:center;padding:2rem">No tienes coches aun. Anade el primero.</p>';
     return;
   }
-  lista.innerHTML = coches.map(c => `
-    <div class="coche-card" onclick="abrirCoche(${c.id})">
+  lista.innerHTML = '';
+  coches.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'coche-card';
+    card.addEventListener('click', () => abrirCoche(c.id));
+    card.innerHTML = `
       <div style="font-size:2rem">🚗</div>
       <div style="flex:1">
         <strong>${c.apodo || c.modelo} ${c.esSugerencia ? '<span class="badge-pendiente">🕒 Pendiente</span>' : ''}</strong><br>
         <small>${c.marca} ${c.modelo} &bull; ${c.anio}</small><br>
-        <small>${c.mantenimientos.length} mantenimientos &bull; ${c.referencias.length} referencias &bull; ${calcularGasto(c)}</small>
+        <small>${(c.mantenimientos || []).length} mantenimientos &bull; ${(c.referencias || []).length} referencias &bull; ${calcularGasto(c)}</small>
       </div>
       <div style="font-size:1.4rem;color:#888">&rsaquo;</div>
-    </div>
-  `).join('');
+    `;
+    lista.appendChild(card);
+  });
 }
 
 // --- Detalle coche ---
 function abrirCoche(id) {
-  cocheActualId = id;
-  const c = coches.find(c => c.id === id);
+  cocheActualId = String(id);
+  const c = getCocheById(id);
+  console.log('abrirCoche id:', id, 'cocheActualId:', cocheActualId, 'coche encontrado:', !!c);
+  if (!c) {
+    console.error('Coche no encontrado:', id, 'IDs disponibles:', coches.map(c => String(c.id)));
+    return;
+  }
+  // Inicializar arrays si no existen
+  if (!c.mantenimientos) c.mantenimientos = [];
+  if (!c.referencias) c.referencias = [];
+  
   document.getElementById('pagina-coches').classList.add('oculto');
   document.getElementById('pagina-detalle').classList.remove('oculto');
   document.getElementById('detalle-titulo').textContent =
@@ -167,16 +196,21 @@ function abrirCoche(id) {
   cargarSelectMotivos();
   renderMantenimientos();
   renderReferencias();
+  renderAlarmas();
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('activo'));
   document.querySelector('.tab[data-tab="mantenimientos"]').classList.add('activo');
   document.getElementById('tab-mantenimientos').classList.remove('oculto');
   document.getElementById('tab-referencias').classList.add('oculto');
+  document.getElementById('tab-alarmas').classList.add('oculto');
 }
 
 // --- Edicion coche ---
 function abrirEdicionCoche() {
-  const c = coches.find(c => c.id === cocheActualId);
+  const c = getCocheById(cocheActualId);
   if (!c) return;
+  if (c.compartido && getPlanKey() !== 'business') {
+    return alert('Solo el plan Business puede editar coches compartidos.');
+  }
   document.getElementById('edit-apodo').value  = c.apodo  || '';
   document.getElementById('edit-marca').value  = c.marca  || '';
   document.getElementById('edit-modelo').value = c.modelo || '';
@@ -185,7 +219,7 @@ function abrirEdicionCoche() {
 }
 
 async function guardarEdicionCoche() {
-  const c = coches.find(c => c.id === cocheActualId);
+  const c = getCocheById(cocheActualId);
   if (!c) return;
   c.apodo  = document.getElementById('edit-apodo').value.trim();
   c.marca  = document.getElementById('edit-marca').value.trim()  || c.marca;

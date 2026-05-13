@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Mantenimiento</title>
   <link rel="stylesheet" href="style.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/parse/4.3.0/parse.min.js"></script>
-  </head>
+    <script src="https://npmcdn.com/parse/dist/parse.min.js"></script>
+      </head>
 <body>
 
   <!-- PANTALLA DE AUTENTICACIÓN -->
@@ -54,31 +54,35 @@
     </div>
   </div>
 
-<header> class="oculto"
+    <header class="oculto">
     <div style="display:flex;align-items:center;gap:8px;">
       <h1>🔧 Mis Coches</h1>
       <span id="header-apodo" style="font-size:0.85rem;opacity:0.8;"></span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <button id="btn-nuevo-coche" class="btn-primary">➕ Añadir coche</button>
-            <button onclick="abrirModalPlanes()" class="btn-plan-header" id="btn-mi-plan">⭐ Mi plan</button>
-      <button onclick="cerrarSesion()" class="btn-danger" style="font-size:0.8rem;padding:6px 12px;">Salir</button>
+      <button id="btn-nuevo-coche" type="button" class="btn-primary">➕ Añadir coche</button>
+      <button id="btn-transferencias-pendientes" type="button" onclick="mostrarModalTransferencias()" class="btn-secondary" style="position:relative;font-size:0.82rem;padding:6px 12px;" title="Transferencias pendientes">&#8645; Transferencias <span id="badge-transferencias" style="display:none;background:#e74c3c;color:#fff;border-radius:50%;font-size:0.7rem;padding:1px 6px;margin-left:4px;">0</span></button>
+      <button id="btn-notificaciones" type="button" onclick="mostrarBandejaNotificaciones()" class="btn-secondary" style="position:relative;font-size:0.82rem;padding:6px 12px;" title="Notificaciones">&#128276; Notificaciones <span id="badge-notificaciones" style="display:none;background:#e74c3c;color:#fff;border-radius:50%;font-size:0.7rem;padding:1px 6px;margin-left:4px;">0</span></button>
+      <button id="btn-mi-plan" type="button" onclick="abrirModalPlanes()" class="btn-plan-header">⭐ Mi plan</button>
+      <button type="button" onclick="cerrarSesion()" class="btn-danger" style="font-size:0.8rem;padding:6px 12px;">Salir</button>
     </div>
   </header>
   <div id="pagina-coches" class="oculto">
+    <div id="alarmas-panel" class="card" style="margin-bottom:16px;display:none;"></div>
     <div id="lista-coches"><p class="vacio">No tienes coches aún. Añade el primero.</p></div>
   </div>
-
   <div id="pagina-detalle" class="oculto">
     <div class="detalle-header">
       <button id="btn-volver" class="btn-volver">← Mis coches</button>
       <h2 id="detalle-titulo"></h2>
       <button id="btn-eliminar-coche" class="btn-danger">Eliminar coche</button>
-              <button id="btn-editar-coche" class="btn-secondary">✏️ Editar coche</button>
+              <button id="btn-editar-coche" type="button" class="btn-secondary">✏️ Editar coche</button>
+      <button id="btn-transferir-coche" type="button" onclick="abrirModalTransferencia()" class="btn-secondary" style="background:#f39c12;color:#fff;border-color:#f39c12;">&#8645; Transferir coche</button>
     </div>
     <div class="tabs">
       <button class="tab activo" data-tab="mantenimientos">Mantenimientos</button>
       <button class="tab" data-tab="referencias">Referencias</button>
+      <button class="tab" data-tab="alarmas">Alarmas</button>
     </div>
     <div id="tab-mantenimientos" class="tab-content">
       <div class="card">
@@ -156,6 +160,39 @@
         <div id="lista-referencias"><p class="vacio">Sin referencias aún.</p></div>
       </div>
     </div>
+    <div id="tab-alarmas" class="tab-content oculto">
+      <div class="card">
+        <h3>Alarmas de este coche</h3>
+        <div id="alarmas-mensaje" class="aviso-info" style="display:none;margin-bottom:14px;"></div>
+        <div id="alarmas-lista"><p class="vacio">No hay alarmas configuradas.</p></div>
+      </div>
+      <div class="card">
+        <h3>Configurar alarma</h3>
+        <form id="form-alarma">
+          <div class="fila">
+            <div class="campo"><label>Tipo de alarma</label><select id="a-tipo" required><option value="itv">ITV</option><option value="aceite">Cambio de aceite</option><option value="custom">Personalizada</option></select></div>
+            <div class="campo"><label>Descripción</label><input type="text" id="a-descripcion" placeholder="Ej: ITV 1 mes" required></div>
+          </div>
+          <div class="fila">
+            <div class="campo"><label>Fecha de aviso</label><input type="date" id="a-fecha"></div>
+            <div class="campo"><label>Kilómetros (opcional)</label><input type="number" id="a-km" placeholder="Ej: 120000"></div>
+          </div>
+          <div class="campo"><label>Notas</label><input type="text" id="a-notas" placeholder="Recordatorio, taller, email..."></div>
+          <div class="fila">
+            <button type="submit" class="btn-primary">💾 Guardar alarma</button>
+            <button type="button" class="btn-secondary" id="btn-reset-alarma">Limpiar</button>
+          </div>
+        </form>
+      </div>
+      <div class="card" style="background:#f8f8ff;">
+        <h4>Consejos de alarmas</h4>
+        <ul style="margin:0;padding-left:18px;color:#444;">
+          <li>ITV: recuerda 1 mes, 15 días y 7 días antes de la fecha.</li>
+          <li>Aceite: programa con 12.000 km o 18 meses.</li>
+          <li>Las alarmas solo están disponibles en planes con soporte de alarmas.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL NUEVO COCHE -->
@@ -200,13 +237,11 @@
           ℹ️ La marca/modelo que has escrito se enviará como sugerencia para revisarla. Si existe, se añadirá para todos los usuarios.
         </div>
 
-        <button type="submit" class="btn-primary" style="width:100%;margin-top:12px">➕ Añadir coche</button>
+                    <button type="button" class="btn-primary" style="width:100%;margin-top:12px;" onclick="submitFormCoche()">&#10133; Añadir coche</button>
       </form>
     </div>
   </div>
 
-  <script src="https://unpkg.com/parse/dist/parse.min.js"></script>
-  <script src="script.js"></script>
 
   <!-- MODAL EDITAR COCHE -->
   <div id="modal-editar-coche" class="modal-overlay oculto">
@@ -279,23 +314,76 @@
     </div>
   </div>
 
-  <!-- MODAL PLANES -->
-  <div id="modal-planes" class="modal-overlay oculto">
-    <div class="modal" style="max-width:700px;width:95%;">
-      <h2 style="text-align:center;margin-bottom:4px;">⭐ Planes de suscripción</h2>
-      <p id="planes-plan-actual" style="text-align:center;color:#666;margin-bottom:20px;"></p>
-      <div id="planes-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
-      <p style="font-size:0.8rem;color:#999;text-align:center;margin-top:16px;">Para cambiar de plan, solicita el cambio y el administrador lo activará manualmente.</p>
-      <div style="text-align:center;margin-top:12px;">
-        <button onclick="document.getElementById('modal-planes').classList.add('oculto')" class="btn-secondary">Cerrar</button>
+      <!-- MODAL LISTA TRANSFERENCIAS -->
+    <div id="modal-lista-transferencias" class="modal-overlay oculto">
+      <div class="modal" style="max-width:500px;width:95%;max-height:80vh;overflow-y:auto;">
+        <h2 style="margin-bottom:14px;">&#8645; Transferencias pendientes</h2>
+        <div id="lista-transferencias"></div>
+        <div style="text-align:center;margin-top:16px;">
+          <button type="button" onclick="document.getElementById('modal-lista-transferencias').classList.add('oculto')" class="btn-secondary">Cerrar</button>
+        </div>
       </div>
     </div>
-  </div>
-    <script src="config.js"></script>
-    <script src="vehiculos.js"></script>
-    <script src="mantenimientos.js"></script>
-    <script src="referencias.js"></script>
-    <script src="auth.js"></script>
-    <script src="eventos.js"></script>
+  <!-- MODAL BANDEJA NOTIFICACIONES -->
+    <div id="modal-bandeja-notificaciones" class="modal-overlay oculto">
+      <div class="modal" style="max-width:500px;width:95%;max-height:80vh;overflow-y:auto;">
+        <h2 style="margin-bottom:14px;">&#128276; Bandeja de entrada</h2>
+        <div id="lista-notificaciones"></div>
+        <div style="text-align:center;margin-top:16px;">
+          <button onclick="document.getElementById('modal-bandeja-notificaciones').classList.add('oculto')" class="btn-secondary">Cerrar</button>
+        </div>
+      </div>
+    </div>
+    <div id="modal-transferencia" class="modal-overlay oculto">
+      <div class="modal" style="max-width:420px;width:95%;">
+        <h2 style="margin-bottom:6px;">&#8645; Transferir coche</h2>
+        <p style="font-size:0.9rem;color:#555;margin-bottom:14px;">El coche <strong id="transf-coche-nombre"></strong> pasara completamente a la cuenta del destinatario. <strong>Perderás todos sus datos.</strong></p>
+        <div class="campo">
+          <label>Correo del destinatario</label>
+          <input type="email" id="transf-email" placeholder="correo@ejemplo.com" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+        </div>
+        <p id="transf-error" class="error oculto" style="color:red;font-size:0.85rem;margin-top:8px;"></p>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button onclick="enviarTransferencia()" class="btn-primary" style="flex:1;">Enviar solicitud</button>
+          <button onclick="document.getElementById('modal-transferencia').classList.add('oculto')" class="btn-secondary">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+  <!-- MODAL PLANES -->
+    <div id="modal-planes" class="modal-overlay oculto">
+      <div class="modal" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;">
+        <!-- Vista: Mi plan actual -->
+        <div id="vista-mi-plan">
+          <h2 style="text-align:center;margin-bottom:6px;">&#11088; Mi plan</h2>
+          <p id="planes-nombre-actual" style="text-align:center;font-size:1.2rem;font-weight:700;color:#4a90d9;margin-bottom:16px;"></p>
+          <div id="planes-ventajas-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+          <div id="planes-acciones" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;"></div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="mostrarVistaMejorar()" class="btn-primary" style="min-width:160px;">&#11014;&#65039; Mejorar plan</button>
+            <button onclick="document.getElementById('modal-planes').classList.add('oculto')" class="btn-secondary">Cerrar</button>
+          </div>
+        </div>
+        <!-- Vista: Todos los planes -->
+        <div id="vista-mejorar-plan" class="oculto">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <button onclick="mostrarVistaMiPlan()" class="btn-secondary" style="padding:6px 12px;font-size:0.85rem;">&#8592; Volver</button>
+            <h2 style="margin:0;">Todos los planes</h2>
+          </div>
+          <div id="todos-planes-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;"></div>
+          <p style="font-size:0.8rem;color:#999;text-align:center;">Para cambiar de plan, solicita el cambio al administrador.</p>
+          <div style="text-align:center;margin-top:10px;">
+            <button onclick="document.getElementById('modal-planes').classList.add('oculto')" class="btn-secondary">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <script src="config.js"></script>
+  <script src="vehiculos.js"></script>
+  <script src="mantenimientos.js"></script>
+  <script src="referencias.js"></script>
+  <script src="auth.js"></script>
+  <script src="eventos.js"></script>
+      <script src="transferencias.js"></script>
 </body>
 </html>

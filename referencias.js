@@ -1,59 +1,37 @@
-=== REFERENCIAS (Parse + UI) =====
+// ===== REFERENCIAS =====
 
-// Parse: añadir referencia
-function añadirReferenciaEnParse(cocheId, mantIdx, desc, precio, detalle) {
-  const Coche = Parse.Object.extend('CocheUsuario');
-  const q = new Parse.Query(Coche);
-  q.equalTo('objectId', cocheId);
-  return q.first().then(obj => {
-    let ms = obj.get('mantenimientos') || [];
-    if (!ms[mantIdx].referencias) ms[mantIdx].referencias = [];
-    ms[mantIdx].referencias.push({ descripcion: desc, precio, detalle });
-    obj.set('mantenimientos', ms);
-    return obj.save();
-  });
-}
-
-// Parse: eliminar referencia
-function eliminarReferenciaEnParse(cocheId, mantIdx, refIdx) {
-  const Coche = Parse.Object.extend('CocheUsuario');
-  const q = new Parse.Query(Coche);
-  q.equalTo('objectId', cocheId);
-  return q.first().then(obj => {
-    let ms = obj.get('mantenimientos') || [];
-    if (ms[mantIdx].referencias) {
-      ms[mantIdx].referencias.splice(refIdx, 1);
-    }
-    obj.set('mantenimientos', ms);
-    return obj.save();
-  });
-}
-
-// UI: render referencias
 function renderReferencias() {
-  const rList = document.getElementById('lista-referencias');
-  rList.innerHTML = '';
-  if (!cocheActual || mantActualIdx === null) return;
-  const ms = cocheActual.mantenimientos || [];
-  const mant = ms[mantActualIdx];
-  if (!mant) return;
-  const refs = mant.referencias || [];
-  refs.forEach((r, i) => {
-    const div = document.createElement('div');
-    div.className = 'referencia-item';
-    div.innerHTML = `
-      <div><strong>${r.descripcion || '(sin desc)'}</strong> - ${r.precio || 0}€</div>
-      <div>${r.detalle || ''}</div>
-      <button onclick="eliminarReferencia(${i})">Eliminar</button>
-    `;
-    rList.appendChild(div);
-  });
+  const c = getCocheById(cocheActualId);
+  if (!c) return;
+  if (!c.referencias) c.referencias = [];
+  const div = document.getElementById('lista-referencias');
+  if (!c.referencias.length) {
+    div.innerHTML = '<p style="color:#888;text-align:center">Sin referencias aun.</p>';
+    return;
+  }
+  div.innerHTML = c.referencias.map(r => `
+    <div class="ref-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <strong>${r.nombre}</strong>
+          ${r.codigo ? `<span style="background:#1e3a5f;color:#90caf9;padding:2px 8px;border-radius:4px;font-size:0.8rem;margin-left:6px">🔖 ${r.codigo}</span>` : ''}
+          ${r.marca  ? `<span style="color:#aaa;font-size:0.85rem;margin-left:6px">${r.marca}</span>` : ''}
+        </div>
+        <button class="btn-icon btn-danger" onclick="eliminarReferencia('${r.id}')">&#215;</button>
+      </div>
+      ${r.notas ? `<p style="color:#aaa;font-size:0.9rem;margin-top:0.3rem">📝 ${r.notas}</p>` : ''}
+      <div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap">
+        ${r.fotoPieza   ? `<img src="${r.fotoPieza}"   style="max-height:80px;border-radius:6px" alt="Pieza">` : ''}
+        ${r.fotoFactura ? `<img src="${r.fotoFactura}" style="max-height:80px;border-radius:6px" alt="Factura">` : ''}
+      </div>
+    </div>
+  `).join('');
 }
 
-// UI: eliminar referencia
-window.eliminarReferencia = function(refIdx) {
-  if (!confirm('¿Eliminar esta referencia?')) return;
-  eliminarReferenciaEnParse(cocheActual.id, mantActualIdx, refIdx).then(() => {
-    cargarCochesUsuario();
-  });
-};
+function eliminarReferencia(id) {
+  if (!confirm('Eliminar esta referencia?')) return;
+  const c = getCocheById(cocheActualId);
+  c.referencias = c.referencias.filter(r => String(r.id) !== String(id));
+  guardarCocheEnParse(c).catch(() => {});
+  renderReferencias();
+}

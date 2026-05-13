@@ -3,6 +3,10 @@
 function mostrarTab(tab) {
   document.getElementById('form-login').classList.toggle('oculto', tab !== 'login');
   document.getElementById('form-registro').classList.toggle('oculto', tab !== 'registro');
+  // Actualizar botones activos
+  document.querySelectorAll('.auth-tab').forEach(btn => {
+    btn.classList.toggle('activo', btn.getAttribute('onclick').includes("'" + tab + "'"));
+  });
 }
 
 function _mostrarAuth() {
@@ -23,6 +27,8 @@ function _mostrarApp(user) {
   document.getElementById('header-apodo').textContent = apodo + ' (' + plan.toUpperCase() + ')';
   cargarMarcas();
   cargarCochesUsuario();
+    if (typeof cargarTransferenciasRecibidas === 'function') cargarTransferenciasRecibidas();
+      if (typeof actualizarBadgeTransferencias === 'function') actualizarBadgeTransferencias();
 }
 
 async function loginUsuario(e) {
@@ -55,7 +61,15 @@ async function registrarUsuario(e) {
     u.set('apodo',    apodo);
     u.set('plan',     'free');
     await u.signUp();
+    try {
+      if (typeof Parse.User.requestEmailVerification === 'function') {
+        await Parse.User.requestEmailVerification(email);
+      }
+    } catch (emailErr) {
+      console.warn('No se pudo solicitar verificación de correo:', emailErr);
+    }
     _mostrarApp(u);
+    alert('Revisa tu correo para verificar tu cuenta y poder iniciar la prueba gratuita de Normal.');
   } catch(ex) {
     err.textContent = ex.message || 'Error al registrarse.';
     err.classList.remove('oculto');
@@ -74,6 +88,9 @@ function cerrarSesion() {
 // ===== INICIO =====
 document.addEventListener('DOMContentLoaded', function() {
   const user = Parse.User.current();
-  if (user) { _mostrarApp(user); }
-  else       { _mostrarAuth(); }
+  if (user) {
+    _mostrarApp(user);
+  } else {
+    _mostrarAuth();
+  }
 });

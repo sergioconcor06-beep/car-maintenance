@@ -58,10 +58,19 @@
     <div id="lista-sugerencias"><div class="vacio">Cargando...</div></div>
   </div>
 </div>
+
+  <div class="card" style="margin-top:24px;">
+    <h2>👥 Gestión de usuarios</h2>
+    <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="busqueda-usuarios" placeholder="Buscar por correo o apodo..." style="flex:1;min-width:200px;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:1rem;">      <button onclick="cargarUsuarios()" style="padding:10px 16px;background:#28a745;color:white;border:none;border-radius:8px;cursor:pointer;">↻ Refrescar</button>      <button onclick="exportarUsuarios()" style="padding:10px 16px;background:#4361ee;color:white;border:none;border-radius:8px;cursor:pointer;">📥 Exportar usuarios</button>
+    </div>
+    <div id="lista-usuarios"><div class="vacio">Cargando...</div></div>
+  </div>
 <script src="https://unpkg.com/parse/dist/parse.min.js"></script>
 <script>
   const APP_ID = 'VNCETodfuWvUtF1L5O5kcCp3r8JpFpg0GugpBNWz';
   const JS_KEY = '5wbDOn3d10TBhGPPfEoFgvZp7EDO5TiD2YyssAPv';
+  const API_BASE_URL = 'http://127.0.0.1:3000';
   Parse.initialize(APP_ID, JS_KEY);
   Parse.serverURL = 'https://parseapi.back4app.com/';
   let todasLasSugerencias = [];
@@ -143,6 +152,83 @@ async function aprobar(id, marca, modelo, anio) {
     } catch(e) { alert('Error al rechazar: ' + e.message); }
   }
   cargarSugerencias();
+
+  // ===== GESTIÓN DE USUARIOS / PLANES =====
+  const PLANES_LISTA = ['free','basic','normal','pro','premium','business'];
+  let todosLosUsuarios = [];
+
+  async function cargarUsuarios() {
+    const div = document.getElementById('lista-usuarios');
+    div.innerHTML = '<div class="vacio">Cargando usuarios...</div>';
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users`);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'No se pudieron cargar los usuarios');
+      }
+      todosLosUsuarios = data.users || [];
+      renderUsuarios('');
+    } catch(e) { div.innerHTML = '<div class="vacio">Error: ' + e.message + '. Asegúrate de iniciar el servidor local con <strong>node server.js</strong> en la carpeta del proyecto.</div>'; }
+  }
+
+  function renderUsuarios(filtro) {
+    const div = document.getElementById('lista-usuarios');
+    let usuariosFiltrados = todosLosUsuarios;
+    if (filtro.trim()) {
+      const filtroLower = filtro.toLowerCase();
+      usuariosFiltrados = todosLosUsuarios.filter(u => {
+        const apodo = (u.apodo || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        return apodo.includes(filtroLower) || email.includes(filtroLower);
+      });
+    }
+    if (!usuariosFiltrados.length) { div.innerHTML = '<div class="vacio">No hay usuarios que coincidan con la búsqueda.</div>'; return; }
+    div.innerHTML = usuariosFiltrados.map(u => {
+      const plan = u.plan || 'free';
+      const apodo = u.apodo || 'Usuario';
+      const email = u.email || '-';
+      const opts = PLANES_LISTA.map(p => `<option value="${p}" ${p===plan?'selected':''}>${p.charAt(0).toUpperCase()+p.slice(1)}</option>`).join('');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;gap:12px;flex-wrap:wrap;">
+        <div><strong>${apodo}</strong><br><small style="color:#888;">${email}</small></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select onchange="cambiarPlan('${u.id}', this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid #ddd;">${opts}</select>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function cambiarPlan(userId, nuevoPlan) {
+    try {
+      const response = await fetch('http://localhost:3000/admin/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, nuevoPlan })
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || 'Error al cambiar plan');
+      alert(`✅ Plan actualizado a "${nuevoPlan}" correctamente.`);
+    } catch(e) { alert('Error al cambiar plan: ' + e.message); }
+  }
+
+  function exportarUsuarios() {
+    fetch(`${API_BASE_URL}/update-usuarios`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Archivo usuarios_export.json actualizado en el workspace.');
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(e => alert('Error al conectar con el servidor: ' + e.message));
+  }
+
+  cargarUsuarios();
+
+  // Event listener para búsqueda
+  document.getElementById('busqueda-usuarios').addEventListener('input', function() {
+    renderUsuarios(this.value);
+  });
 </script>
 </body>
 </html>
